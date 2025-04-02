@@ -117,25 +117,31 @@ export default function CoursePage() {
       </div>
 
       <div style={styles.form}>
+        <label style={styles.label}>📌 Task Title</label>
         <input
           type="text"
-          placeholder="Task title"
+          placeholder="Enter a task..."
           value={taskTitle}
           onChange={e => setTaskTitle(e.target.value)}
           style={styles.input}
         />
+
+        <label style={styles.label}>📅 Due Date</label>
         <input
           type="date"
           value={taskDate}
           onChange={e => setTaskDate(e.target.value)}
           style={styles.input}
         />
+
+        <label style={styles.label}>⏰ Time</label>
         <input
           type="time"
           value={taskTime}
           onChange={e => setTaskTime(e.target.value)}
           style={styles.input}
         />
+
         <button onClick={handleAddTask} style={styles.button}>
           {editingTaskId ? '💾 Save Changes' : '➕ Add Task'}
         </button>
@@ -215,5 +221,13 @@ const styles = {
     borderRadius: '8px',
     cursor: 'pointer',
     fontWeight: 'bold',
+  },
+  label: {
+    fontSize: '14px',
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: '4px',
+    marginTop: '6px',
+    textAlign: 'left',
   },
 };
