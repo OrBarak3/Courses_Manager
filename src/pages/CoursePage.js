@@ -1,6 +1,8 @@
 // src/pages/CoursePage.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { db } from '../firebase';
+import { collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 
 // 1. Define the mapping up top
 const emojiMap = {
@@ -15,42 +17,63 @@ const emojiMap = {
 export default function CoursePage() {
   const { courseName } = useParams();
   const navigate = useNavigate();
-
-  // 2. Pick an emoji or default
   const chosenEmoji = emojiMap[courseName] || '📘';
 
-  // States
   const [tasks, setTasks] = useState([]);
   const [taskTitle, setTaskTitle] = useState('');
   const [taskDate, setTaskDate] = useState('');
   const [taskTime, setTaskTime] = useState('');
   const [editingTaskId, setEditingTaskId] = useState(null);
 
+  // Get course ID by querying Firestore
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'courses'), (snapshot) => {
+      snapshot.forEach(docSnap => {
+        if (docSnap.data().name === courseName) {
+          const tasksRef = collection(doc(db, 'courses', docSnap.id), 'tasks');
+          onSnapshot(tasksRef, (tasksSnap) => {
+            const taskData = tasksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setTasks(taskData);
+          });
+        }
+      });
+    });
+    return () => unsubscribe();
+  }, [courseName]);
+
   const handleReturnHome = () => navigate('/');
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (!taskTitle.trim()) return;
 
-    if (editingTaskId) {
-      setTasks(tasks.map(task =>
-        task.id === editingTaskId
-          ? { ...task, title: taskTitle, date: taskDate, time: taskTime }
-          : task
-      ));
-      setEditingTaskId(null);
-    } else {
-      const newTask = {
-        id: Date.now().toString(),
-        title: taskTitle,
-        date: taskDate,
-        time: taskTime,
-      };
-      setTasks([...tasks, newTask]);
-    }
+    const courseSnapshot = await onSnapshot(collection(db, 'courses'), (snapshot) => {
+      snapshot.forEach(async docSnap => {
+        if (docSnap.data().name === courseName) {
+          const courseRef = doc(db, 'courses', docSnap.id);
+          const tasksRef = collection(courseRef, 'tasks');
 
-    setTaskTitle('');
-    setTaskDate('');
-    setTaskTime('');
+          if (editingTaskId) {
+            const taskRef = doc(tasksRef, editingTaskId);
+            await updateDoc(taskRef, {
+              title: taskTitle,
+              date: taskDate,
+              time: taskTime,
+            });
+            setEditingTaskId(null);
+          } else {
+            await addDoc(tasksRef, {
+              title: taskTitle,
+              date: taskDate,
+              time: taskTime,
+            });
+          }
+
+          setTaskTitle('');
+          setTaskDate('');
+          setTaskTime('');
+        }
+      });
+    });
   };
 
   const handleEdit = (task) => {
@@ -60,23 +83,28 @@ export default function CoursePage() {
     setEditingTaskId(task.id);
   };
 
-  const handleRemove = (id) => {
+  const handleRemove = async (id) => {
     const confirmDelete = window.confirm('Are you sure you want to delete this task?');
-    if (confirmDelete) {
-      setTasks(tasks.filter(task => task.id !== id));
-    }
+    if (!confirmDelete) return;
+
+    const snapshot = await onSnapshot(collection(db, 'courses'), (courseSnap) => {
+      courseSnap.forEach(async courseDoc => {
+        if (courseDoc.data().name === courseName) {
+          const taskRef = doc(db, 'courses', courseDoc.id, 'tasks', id);
+          await deleteDoc(taskRef);
+        }
+      });
+    });
   };
 
   return (
     <div style={styles.container}>
       <button onClick={handleReturnHome} style={styles.homeButton}>Home</button>
-      
-      {/* 3. Display the chosen emoji with the course name */}
+
       <h1 style={styles.title}>
         {chosenEmoji} {courseName}
       </h1>
 
-      {/* Tasks list... */}
       <div style={styles.taskList}>
         {tasks.map(task => (
           <div key={task.id} style={styles.taskItem}>
@@ -92,7 +120,6 @@ export default function CoursePage() {
         ))}
       </div>
 
-      {/* Add/Edit form... */}
       <div style={styles.form}>
         <input
           type="text"
