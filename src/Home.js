@@ -9,7 +9,7 @@ export default function Home() {
     { id: '2', name: 'הסקה סטטיסטית' },
     { id: '3', name: 'כלכלה הנדסית' },
     { id: '4', name: 'חדו"א 2' },
-    { id: '5', name: 'הסתברויות' },
+    { id: '5', name: 'הסתברות' },
     { id: '6', name: 'מד"ר' },
   ]);
 
@@ -29,16 +29,23 @@ export default function Home() {
     }
   };
 
+  // Old hard-coded approach (commented out):
+  // const goToCoursePage = (course) => {
+  //   if (course.name === 'פייתון') {
+  //     navigate('/course/python');
+  //   } else if (course.name === 'הסקה סטטיסטית') {
+  //     navigate('/course/statistical-inference');
+  //   } else if (course.name === 'כלכלה הנדסית') {
+  //     navigate('/course/engineering-economics');
+  //   } else {
+  //     alert(`No page created yet for: ${course.name}`);
+  //   }
+  // };
+
+  // Dynamic approach:
   const goToCoursePage = (course) => {
-    if (course.name === 'פייתון') {
-      navigate('/course/python');
-    } else if (course.name === 'הסקה סטטיסטית') {
-      navigate('/course/statistical-inference');
-    } else {
-      alert(`No page created yet for: ${course.name}`);
-    }
+    navigate(`/course/${course.name}`);
   };
-  
 
   return (
     <div style={styles.container}>
