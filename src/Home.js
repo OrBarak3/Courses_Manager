@@ -1,48 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { db } from './firebase';
+import { collection, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
 
 export default function Home() {
   const navigate = useNavigate();
-
-  const [courses, setCourses] = useState([
-    { id: '1', name: 'פייתון' },
-    { id: '2', name: 'הסקה סטטיסטית' },
-    { id: '3', name: 'כלכלה הנדסית' },
-    { id: '4', name: 'חדו"א 2' },
-    { id: '5', name: 'הסתברות' },
-    { id: '6', name: 'מד"ר' },
-  ]);
-
+  const [courses, setCourses] = useState([]);
   const [newCourse, setNewCourse] = useState('');
 
-  const handleAddCourse = () => {
-    if (!newCourse.trim()) return;
-    const newId = Date.now().toString();
-    setCourses([...courses, { id: newId, name: newCourse }]);
-    setNewCourse('');
-  };
+  // Subscribe to the "courses" collection in real time
+  useEffect(() => {
+    const coursesCollection = collection(db, "courses");
+    const unsubscribe = onSnapshot(coursesCollection, (snapshot) => {
+      const coursesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setCourses(coursesData);
+    });
+    return () => unsubscribe();
+  }, []);
 
-  const handleRemoveCourse = (course) => {
-    const confirmDelete = window.confirm(`Are you sure you want to delete "${course.name}"?`);
-    if (confirmDelete) {
-      setCourses(courses.filter(c => c.id !== course.id));
+  // Updated handleAddCourse using async/await
+  const handleAddCourse = async () => {
+    if (!newCourse.trim()) return;
+    try {
+      // This line creates the document in Firestore (and the collection automatically if needed)
+      await addDoc(collection(db, "courses"), { name: newCourse });
+      setNewCourse('');
+      // Navigate to the new course's page dynamically:
+      navigate(`/course/${newCourse}`);
+    } catch (error) {
+      console.error("Error adding course: ", error);
     }
   };
 
-  // Old hard-coded approach (commented out):
-  // const goToCoursePage = (course) => {
-  //   if (course.name === 'פייתון') {
-  //     navigate('/course/python');
-  //   } else if (course.name === 'הסקה סטטיסטית') {
-  //     navigate('/course/statistical-inference');
-  //   } else if (course.name === 'כלכלה הנדסית') {
-  //     navigate('/course/engineering-economics');
-  //   } else {
-  //     alert(`No page created yet for: ${course.name}`);
-  //   }
-  // };
+  const handleRemoveCourse = async (course) => {
+    const confirmDelete = window.confirm(`Are you sure you want to delete "${course.name}"?`);
+    if (confirmDelete) {
+      try {
+        await deleteDoc(doc(db, "courses", course.id));
+      } catch (error) {
+        console.error("Error deleting course: ", error);
+      }
+    }
+  };
 
-  // Dynamic approach:
+  // Dynamic navigation for any course name
   const goToCoursePage = (course) => {
     navigate(`/course/${course.name}`);
   };
