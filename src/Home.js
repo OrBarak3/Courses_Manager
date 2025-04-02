@@ -1,3 +1,4 @@
+// src/Home.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from './firebase';
@@ -21,20 +22,20 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-  // Updated handleAddCourse using async/await
+  // Add a new course to Firestore
   const handleAddCourse = async () => {
     if (!newCourse.trim()) return;
     try {
-      // This line creates the document in Firestore (and the collection automatically if needed)
       await addDoc(collection(db, "courses"), { name: newCourse });
       setNewCourse('');
-      // Navigate to the new course's page dynamically:
+      // Navigate to the new course's page dynamically
       navigate(`/course/${newCourse}`);
     } catch (error) {
       console.error("Error adding course: ", error);
     }
   };
 
+  // Remove a course from Firestore
   const handleRemoveCourse = async (course) => {
     const confirmDelete = window.confirm(`Are you sure you want to delete "${course.name}"?`);
     if (confirmDelete) {
