@@ -2,9 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../firebase';
-import { collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, getDocs } from 'firebase/firestore';
 
-// 1. Define the mapping up top
 const emojiMap = {
   'פייתון': '🐍',
   'הסקה סטטיסטית': '📊',
@@ -25,7 +24,6 @@ export default function CoursePage() {
   const [taskTime, setTaskTime] = useState('');
   const [editingTaskId, setEditingTaskId] = useState(null);
 
-  // Get course ID by querying Firestore
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'courses'), (snapshot) => {
       snapshot.forEach(docSnap => {
@@ -46,33 +44,32 @@ export default function CoursePage() {
   const handleAddTask = async () => {
     if (!taskTitle.trim()) return;
 
-    const courseSnapshot = await onSnapshot(collection(db, 'courses'), (snapshot) => {
-      snapshot.forEach(async docSnap => {
-        if (docSnap.data().name === courseName) {
-          const courseRef = doc(db, 'courses', docSnap.id);
-          const tasksRef = collection(courseRef, 'tasks');
+    const courseQuery = await getDocs(collection(db, 'courses'));
+    courseQuery.forEach(async (docSnap) => {
+      if (docSnap.data().name === courseName) {
+        const courseRef = doc(db, 'courses', docSnap.id);
+        const tasksRef = collection(courseRef, 'tasks');
 
-          if (editingTaskId) {
-            const taskRef = doc(tasksRef, editingTaskId);
-            await updateDoc(taskRef, {
-              title: taskTitle,
-              date: taskDate,
-              time: taskTime,
-            });
-            setEditingTaskId(null);
-          } else {
-            await addDoc(tasksRef, {
-              title: taskTitle,
-              date: taskDate,
-              time: taskTime,
-            });
-          }
-
-          setTaskTitle('');
-          setTaskDate('');
-          setTaskTime('');
+        if (editingTaskId) {
+          const taskRef = doc(tasksRef, editingTaskId);
+          await updateDoc(taskRef, {
+            title: taskTitle,
+            date: taskDate,
+            time: taskTime,
+          });
+          setEditingTaskId(null);
+        } else {
+          await addDoc(tasksRef, {
+            title: taskTitle,
+            date: taskDate,
+            time: taskTime,
+          });
         }
-      });
+
+        setTaskTitle('');
+        setTaskDate('');
+        setTaskTime('');
+      }
     });
   };
 
@@ -87,13 +84,12 @@ export default function CoursePage() {
     const confirmDelete = window.confirm('Are you sure you want to delete this task?');
     if (!confirmDelete) return;
 
-    const snapshot = await onSnapshot(collection(db, 'courses'), (courseSnap) => {
-      courseSnap.forEach(async courseDoc => {
-        if (courseDoc.data().name === courseName) {
-          const taskRef = doc(db, 'courses', courseDoc.id, 'tasks', id);
-          await deleteDoc(taskRef);
-        }
-      });
+    const courseQuery = await getDocs(collection(db, 'courses'));
+    courseQuery.forEach(async courseDoc => {
+      if (courseDoc.data().name === courseName) {
+        const taskRef = doc(db, 'courses', courseDoc.id, 'tasks', id);
+        await deleteDoc(taskRef);
+      }
     });
   };
 
