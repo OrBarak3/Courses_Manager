@@ -2,62 +2,115 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from './firebase';
-import { collection, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import {
+  collection,
+  onSnapshot,
+  addDoc,
+  deleteDoc,
+  doc,
+  getDocs,
+} from 'firebase/firestore';
 
 export default function Home() {
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [newCourse, setNewCourse] = useState('');
+  const [upcomingTasks, setUpcomingTasks] = useState([]);
 
-  // Subscribe to the "courses" collection in real time
+  // Fetch courses and tasks
   useEffect(() => {
-    const coursesCollection = collection(db, "courses");
-    const unsubscribe = onSnapshot(coursesCollection, (snapshot) => {
-      const coursesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setCourses(coursesData);
-    });
-    return () => unsubscribe();
+    const fetchCourses = async () => {
+      const coursesCollection = collection(db, 'courses');
+      const unsubscribe = onSnapshot(coursesCollection, async (snapshot) => {
+        const courseList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setCourses(courseList);
+
+        // Fetch upcoming tasks for all courses
+        let allUpcomingTasks = [];
+
+        for (let course of courseList) {
+          const tasksSnap = await getDocs(collection(db, 'courses', course.id, 'tasks'));
+          const today = new Date();
+          const weekFromNow = new Date();
+          weekFromNow.setDate(today.getDate() + 7);
+
+          tasksSnap.forEach(taskDoc => {
+            const task = taskDoc.data();
+            if (task.date) {
+              const taskDate = new Date(task.date);
+              if (taskDate >= today && taskDate <= weekFromNow) {
+                allUpcomingTasks.push({
+                  ...task,
+                  courseName: course.name,
+                  date: formatDateToIsraeli(task.date),
+                });
+              }
+            }
+          });
+        }
+
+        setUpcomingTasks(allUpcomingTasks);
+      });
+
+      return () => unsubscribe();
+    };
+
+    fetchCourses();
   }, []);
 
-  // Add a new course to Firestore
   const handleAddCourse = async () => {
     if (!newCourse.trim()) return;
     try {
-      await addDoc(collection(db, "courses"), { name: newCourse });
+      await addDoc(collection(db, 'courses'), { name: newCourse });
       setNewCourse('');
-      // Navigate to the new course's page dynamically
       navigate(`/course/${newCourse}`);
     } catch (error) {
-      console.error("Error adding course: ", error);
+      console.error('Error adding course: ', error);
     }
   };
 
-  // Remove a course from Firestore
   const handleRemoveCourse = async (course) => {
-    const confirmDelete = window.confirm(`Are you sure you want to delete "${course.name}"?`);
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete "${course.name}"?`
+    );
     if (confirmDelete) {
       try {
-        await deleteDoc(doc(db, "courses", course.id));
+        await deleteDoc(doc(db, 'courses', course.id));
       } catch (error) {
-        console.error("Error deleting course: ", error);
+        console.error('Error deleting course: ', error);
       }
     }
   };
 
-  // Dynamic navigation for any course name
   const goToCoursePage = (course) => {
     navigate(`/course/${course.name}`);
+  };
+
+  const formatDateToIsraeli = (dateStr) => {
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
   };
 
   return (
     <div style={styles.container}>
       <h1 style={styles.title}>📚 My Courses</h1>
 
+      {upcomingTasks.length > 0 && (
+        <div style={styles.reminderBox}>
+          <h2 style={styles.reminderTitle}>⏰ Tasks in the Next 7 Days</h2>
+          {upcomingTasks.map((task, index) => (
+            <div key={index} style={styles.reminderItem}>
+              <strong>{task.courseName}:</strong> {task.title} – {task.date} {task.time && `at ${task.time}`}
+            </div>
+          ))}
+        </div>
+      )}
+
       <div style={styles.cardGrid}>
-        {courses.map(course => (
+        {courses.map((course) => (
           <div key={course.id} style={styles.card}>
             <button
               style={styles.deleteButton}
@@ -66,10 +119,7 @@ export default function Home() {
             >
               ❌
             </button>
-            <h2
-              style={styles.cardTitle}
-              onClick={() => goToCoursePage(course)}
-            >
+            <h2 style={styles.cardTitle} onClick={() => goToCoursePage(course)}>
               {course.name}
             </h2>
           </div>
@@ -81,7 +131,7 @@ export default function Home() {
           type="text"
           placeholder="Enter new course"
           value={newCourse}
-          onChange={e => setNewCourse(e.target.value)}
+          onChange={(e) => setNewCourse(e.target.value)}
           style={styles.input}
         />
         <button onClick={handleAddCourse} style={styles.button}>
@@ -102,7 +152,23 @@ const styles = {
   },
   title: {
     fontSize: '36px',
+    marginBottom: '20px',
+  },
+  reminderBox: {
+    backgroundColor: '#fff3cd',
+    border: '1px solid #ffeeba',
+    borderRadius: '10px',
+    padding: '20px',
     marginBottom: '30px',
+    textAlign: 'left',
+  },
+  reminderTitle: {
+    fontSize: '20px',
+    marginBottom: '10px',
+  },
+  reminderItem: {
+    marginBottom: '8px',
+    fontSize: '16px',
   },
   cardGrid: {
     display: 'flex',
