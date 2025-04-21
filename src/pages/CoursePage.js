@@ -106,7 +106,18 @@ export default function CoursePage() {
           <div key={task.id} style={styles.taskItem}>
             <div>
               <strong>{task.title}</strong><br />
-              <small>{task.date} {task.time}</small>
+              <div style={styles.tagContainer}>
+                {task.date && (
+                  <span style={styles.tag}>
+                    📅 {task.date}
+                  </span>
+                )}
+                {task.time && (
+                  <span style={styles.tag}>
+                    ⏰ {task.time}
+                  </span>
+                )}
+              </div>
             </div>
             <div style={styles.buttonGroup}>
               <button onClick={() => handleEdit(task)} style={styles.editBtn}>Edit</button>
@@ -179,10 +190,11 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '10px',
-    marginBottom: '10px',
+    padding: '12px',
+    marginBottom: '12px',
     border: '1px solid #ccc',
-    borderRadius: '8px',
+    borderRadius: '10px',
+    backgroundColor: '#fdfdfd',
   },
   buttonGroup: {
     display: 'flex',
@@ -229,5 +241,18 @@ const styles = {
     marginBottom: '4px',
     marginTop: '6px',
     textAlign: 'left',
+  },
+  tagContainer: {
+    marginTop: '6px',
+    display: 'flex',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  tag: {
+    backgroundColor: '#e9ecef',
+    color: '#333',
+    padding: '4px 8px',
+    borderRadius: '20px',
+    fontSize: '12px',
   },
 };
