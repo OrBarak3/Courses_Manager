@@ -13,6 +13,12 @@ const emojiMap = {
   'מד"ר': '🔬',
 };
 
+// Format "2025-04-10" to "10/04/2025"
+function formatDateToIsraeli(dateString) {
+  const [year, month, day] = dateString.split('-');
+  return `${day}/${month}/${year}`;
+}
+
 export default function CoursePage() {
   const { courseName } = useParams();
   const navigate = useNavigate();
@@ -108,14 +114,16 @@ export default function CoursePage() {
               <strong>{task.title}</strong><br />
               <div style={styles.tagContainer}>
                 {task.date && (
-                  <span style={styles.tag}>
-                    📅 {task.date}
-                  </span>
+                  <div style={styles.dateTimeBox}>
+                    <span style={styles.emoji}>📅</span>
+                    <span style={styles.dateText}>{formatDateToIsraeli(task.date)}</span>
+                  </div>
                 )}
                 {task.time && (
-                  <span style={styles.tag}>
-                    ⏰ {task.time}
-                  </span>
+                  <div style={styles.dateTimeBox}>
+                    <span style={styles.emoji}>⏰</span>
+                    <span style={styles.dateText}>{task.time}</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -243,16 +251,26 @@ const styles = {
     textAlign: 'left',
   },
   tagContainer: {
-    marginTop: '6px',
+    marginTop: '8px',
     display: 'flex',
-    gap: '8px',
+    gap: '12px',
     flexWrap: 'wrap',
   },
-  tag: {
-    backgroundColor: '#e9ecef',
-    color: '#333',
-    padding: '4px 8px',
-    borderRadius: '20px',
-    fontSize: '12px',
+  dateTimeBox: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#f1f3f5',
+    padding: '6px 12px',
+    borderRadius: '12px',
+    fontSize: '16px',
+    fontWeight: 'bold',
+  },
+  emoji: {
+    fontSize: '20px',
+  },
+  dateText: {
+    fontSize: '18px',
+    fontWeight: 'bold',
   },
 };
